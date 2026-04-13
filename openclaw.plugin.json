@@ -14,7 +14,7 @@
         "properties": {
           "workspaceRoot": {
             "type": "string",
-            "description": "Optional workspace root override. Defaults to OPENCLAW_WORKSPACE or ~/.openclaw/workspace on the Gateway host."
+            "description": "Optional workspace root override. Defaults to OPENCLAW_WORKSPACE when set, otherwise the Gateway host's normal local workspace default."
           },
           "correctionsFile": {
             "type": "string",

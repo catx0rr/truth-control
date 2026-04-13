@@ -15,7 +15,7 @@ This file lives inside `runtime/`. Resolve the absolute path of the parent of `r
 1. Resolve the absolute path of the parent of `runtime/` as `SKILL_ROOT`
 2. Use the current working directory as `WORKSPACE_ROOT`
 3. Resolve `TELEMETRY_ROOT` = the chosen telemetry root
-4. Telemetry root resolution order: explicit operator choice, then `TRUTH_CONTROL_TELEMETRY_ROOT`, then `TRUTH_RECOVERY_TELEMETRY_ROOT`, then `~/.openclaw/telemetry` as a local-install fallback example
+4. Telemetry root resolution order: explicit operator choice, then `TRUTH_CONTROL_TELEMETRY_ROOT`, then `TRUTH_RECOVERY_TELEMETRY_ROOT`, then `~/.openclaw/telemetry` as a common local-host fallback example
 5. Do not assume a hardcoded skill path
 6. Do not assume a hardcoded workspace path
 

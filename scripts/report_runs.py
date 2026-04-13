@@ -20,7 +20,7 @@ Telemetry root resolution:
     2. --telemetry-dir
     3. TRUTH_CONTROL_TELEMETRY_ROOT
     4. TRUTH_RECOVERY_TELEMETRY_ROOT
-    5. ~/.openclaw/telemetry  (default example/fallback)
+    5. ~/.openclaw/telemetry  (common local-host fallback example)
 """
 
 import argparse

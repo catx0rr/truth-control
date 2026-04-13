@@ -59,7 +59,7 @@ Telemetry root resolution guidance:
 - explicit operator choice is best
 - otherwise use `TRUTH_CONTROL_TELEMETRY_ROOT`
 - otherwise use `TRUTH_RECOVERY_TELEMETRY_ROOT`
-- otherwise `~/.openclaw/telemetry` is the local-install fallback example
+- otherwise `~/.openclaw/telemetry` is the common local-host fallback example
 
 All four must be fully resolved — no `~`, no `$SKILL_ROOT`, no `$HOME`, no placeholders.
 

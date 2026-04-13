@@ -99,7 +99,7 @@ Resolution order used by the helper scripts in this package:
 - explicit `--telemetry-dir`
 - `TRUTH_CONTROL_TELEMETRY_ROOT`
 - `TRUTH_RECOVERY_TELEMETRY_ROOT`
-- `~/.openclaw/telemetry` as fallback example/default on a typical local install
+- `~/.openclaw/telemetry` as a common local-host fallback example, not a required package path
 
 Example:
 
@@ -175,7 +175,7 @@ Also verify the control-plane split:
 
 Note:
 - the inbound correction detector is currently implemented in plugin runtime code, not as a separate `detect_correction.py` script
-- on this installed SDK/runtime, `before_dispatch` is used as the practical prepared-turn interception point for inbound correction detection; revalidate this on OpenClaw upgrades
+- on the currently tested SDK/runtime, `before_dispatch` is used as the practical prepared-turn interception point for inbound correction detection; revalidate this on OpenClaw upgrades
 - the detector is conservative by design
 
 ---

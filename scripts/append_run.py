@@ -18,7 +18,7 @@ Telemetry root resolution:
     2. --telemetry-dir
     3. TRUTH_CONTROL_TELEMETRY_ROOT
     4. TRUTH_RECOVERY_TELEMETRY_ROOT
-    5. ~/.openclaw/telemetry  (default example/fallback)
+    5. ~/.openclaw/telemetry  (common local-host fallback example)
 """
 
 import argparse
@@ -126,7 +126,7 @@ def main():
         description='Truth Recovery: Deterministic JSONL Run Record Writer',
     )
     parser.add_argument('--telemetry-dir', default=None,
-                        help='Telemetry root directory (overrides env vars; defaults to TRUTH_CONTROL_TELEMETRY_ROOT, then TRUTH_RECOVERY_TELEMETRY_ROOT, then ~/.openclaw/telemetry)')
+                        help='Telemetry root directory (overrides env vars; otherwise uses TRUTH_CONTROL_TELEMETRY_ROOT, then TRUTH_RECOVERY_TELEMETRY_ROOT, then ~/.openclaw/telemetry as a common local-host fallback)')
     parser.add_argument('--runs-file', default=None,
                         help='Explicit runs file path (overrides --telemetry-dir)')
     parser.add_argument('--mode', required=True, choices=['hourly', 'nightly-preconsolidation'],

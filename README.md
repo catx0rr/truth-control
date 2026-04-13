@@ -1,7 +1,7 @@
-# Truth Control Plugin
+# Truth Control Claw
 
 Compatibility surfaces in this phase:
-- package name: `truth-control`
+- package name: `truth-control-claw`
 - plugin id: `truth-recovery`
 - native tool: `truth_recovery`
 - bundled skill path: `skills/truth-recovery/`
@@ -102,8 +102,8 @@ This plugin uses a split hook design:
 
 ### Inbound correction trigger
 The public internal hook docs describe this role as `message:preprocessed`.
-On the current installed SDK/runtime, this package implements the same role on `before_dispatch` as the practical prepared-turn interception point, because it exposes the prepared body plus `sessionKey` needed for transient handoff.
-This is an SDK/version-specific compatibility choice and should be revalidated when OpenClaw is upgraded.
+On the currently tested SDK/runtime, this package uses `before_dispatch` as the practical prepared-turn interception point because it exposes the prepared body plus `sessionKey` needed for transient handoff.
+This is an SDK/version-specific compatibility choice and should be revalidated on OpenClaw upgrades.
 
 That detector is implemented in the plugin runtime, not as a separate Python script in this version.
 
@@ -180,7 +180,7 @@ Telemetry root resolution for scripts/docs in this package:
 - explicit `--telemetry-dir` / explicit output path wins
 - then `TRUTH_CONTROL_TELEMETRY_ROOT`
 - then `TRUTH_RECOVERY_TELEMETRY_ROOT`
-- then `~/.openclaw/telemetry` as fallback example/default on a typical local install
+- then `~/.openclaw/telemetry` as a common local-host fallback example, not a required package path
 
 
 This plugin depends on:

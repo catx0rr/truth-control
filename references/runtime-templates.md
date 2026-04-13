@@ -8,7 +8,7 @@ Telemetry root resolution used by the helper scripts in this package:
 1. explicit `--telemetry-dir`
 2. `TRUTH_CONTROL_TELEMETRY_ROOT`
 3. `TRUTH_RECOVERY_TELEMETRY_ROOT`
-4. `~/.openclaw/telemetry` as fallback example/default on a typical local install
+4. `~/.openclaw/telemetry` as a common local-host fallback example, not a required package path
 
 ---
 
