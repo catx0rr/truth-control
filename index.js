@@ -495,7 +495,7 @@ export default definePluginEntry({
   id: "truth-recovery",
   name: "Truth Control",
   description:
-    "Soft-renamed truth-control plugin with compatibility ids preserved for local truth gating, correction-trigger support, and correction precedence.",
+    "Truth-control plugin with compatibility ids preserved for local truth gating, correction-trigger support, and correction precedence.",
   register(api) {
     api.on("before_dispatch", async (event, ctx) => {
       if (!asBoolean(api.pluginConfig?.enableCorrectionCapture, true)) {

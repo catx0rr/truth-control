@@ -2,7 +2,7 @@
   "id": "truth-recovery",
   "name": "Truth Control",
   "version": "1.0.0",
-  "description": "Soft-renamed truth-control plugin with compatibility ids preserved for local truth gating, correction-trigger support, correction precedence, bundled skill guidance, and distiller runtime prompts.",
+  "description": "Truth-control plugin with compatibility ids preserved for local truth gating, correction-trigger support, correction precedence, bundled skill guidance, and distiller runtime prompts.",
   "skills": ["skills"],
   "configSchema": {
     "type": "object",

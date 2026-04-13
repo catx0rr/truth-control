@@ -197,6 +197,6 @@ This keeps the plugin standalone while preserving the narrow boundary:
 
 - This plugin is not the global retrieval router.
 - This plugin should not inject the full retrieval ladder.
-- This phase is a **soft rename** to truth-control. Compatibility ids remain truth-recovery for now.
+- This package now presents as truth-control. Compatibility ids remain truth-recovery for now.
 - If Python 3 is missing, native tool calls and explicit correction auto-writeback will fail.
 - If the plugin files are incomplete, bundled skill and distiller support will be incomplete too.

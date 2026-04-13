@@ -6,8 +6,8 @@ Compatibility surfaces in this phase:
 - native tool: `truth_recovery`
 - bundled skill path: `skills/truth-recovery/`
 
-This is a **soft rename** from truth-recovery to **truth-control**.
-The behavior is being widened into a narrow control-plane package, but runtime ids stay compatibility-safe for now.
+This package now presents as **truth-control** while keeping compatibility-safe runtime ids for now.
+The behavior is being widened into a narrow control-plane package without breaking the existing plugin and tool ids.
 
 ## What this plugin is
 
