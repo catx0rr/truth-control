@@ -1,0 +1,68 @@
+{
+  "id": "truth-recovery",
+  "name": "Truth Control",
+  "version": "1.0.0",
+  "description": "Soft-renamed truth-control plugin with compatibility ids preserved for local truth gating, correction-trigger support, correction precedence, bundled skill guidance, and distiller runtime prompts.",
+  "skills": ["skills"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "paths": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspaceRoot": {
+            "type": "string",
+            "description": "Optional workspace root override. Defaults to OPENCLAW_WORKSPACE or ~/.openclaw/workspace on the Gateway host."
+          },
+          "correctionsFile": {
+            "type": "string",
+            "description": "Optional absolute or workspace-relative override for the recent corrections JSONL."
+          },
+          "pendingFile": {
+            "type": "string",
+            "description": "Optional absolute or workspace-relative override for the pending actions JSONL."
+          },
+          "memoryFile": {
+            "type": "string",
+            "description": "Optional absolute or workspace-relative override for MEMORY.md."
+          },
+          "dailyLogDir": {
+            "type": "string",
+            "description": "Optional absolute or workspace-relative override for the daily memory directory."
+          }
+        }
+      },
+      "pythonBinary": {
+        "type": "string",
+        "description": "Optional Python executable path. Defaults to python3."
+      },
+      "enablePromptGuidance": {
+        "type": "boolean",
+        "default": true,
+        "description": "When true, inject a narrow before_prompt_build truth-control nudge for recall-sensitive or correction-shaped turns."
+      },
+      "enableCorrectionCapture": {
+        "type": "boolean",
+        "default": true,
+        "description": "When true, inspect inbound prepared turns for explicit or possible user corrections and set a transient per-session correction signal."
+      },
+      "enableExplicitCorrectionAutoWriteback": {
+        "type": "boolean",
+        "default": true,
+        "description": "When true, structured explicit corrections may be auto-recorded to the runtime correction register before the agent answers."
+      },
+      "correctionSignalTtlMs": {
+        "type": "integer",
+        "default": 300000,
+        "description": "How long to keep the transient correction-turn signal available for the matching agent turn."
+      },
+      "defaultCheckPending": {
+        "type": "boolean",
+        "default": true,
+        "description": "Default for whether recover mode also checks the pending actions journal."
+      }
+    }
+  }
+}
