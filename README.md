@@ -342,7 +342,6 @@ After install and gateway restart, verify:
 - bare low-confidence forms do not create noisy automatic writes by default
 - benign non-corrections do not trigger writeback reflex too often
 
-## Status
+## License
 
-This package is staged for upstream review first.
-Compatibility ids are intentionally preserved in this phase.
+Licensed under the MIT License.
