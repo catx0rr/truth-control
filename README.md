@@ -1,19 +1,22 @@
 # Truth Control Claw
 
-## Package identity and compatibility
+## Compatibility identity
 
-Operator-facing package name in this phase:
+This package is in a transitional naming phase.
+
+Operator-facing package name:
 - package name: `truth-control-claw`
-- recommended install path example: `/absolute/path/to/truth-control-claw`
-- recommended local extensions folder example: `~/.openclaw/extensions/truth-control-claw/`
 
-Compatibility runtime ids preserved in this phase:
+Runtime compatibility ids still preserved in this phase:
 - plugin id: `truth-recovery`
 - native tool: `truth_recovery`
 - bundled skill path: `skills/truth-recovery/`
+- skill frontmatter name: `truth-control`
 
-This package now presents as **truth-control** while keeping compatibility-safe runtime ids for now.
-The behavior is being widened into a narrow control-plane package without breaking the existing plugin and tool ids.
+Why they differ right now:
+- operators install and refer to the package as **truth-control-claw**
+- runtime ids stay on the old compatibility surface so existing plugin wiring, tool calls, and bundle loading do not break during the transition
+- the package identity has moved first, while the runtime surface is intentionally lagging behind for compatibility
 
 ## What this plugin is
 
@@ -90,7 +93,7 @@ Flow:
 - structured explicit corrections may be written immediately to the runtime correction register
 - later distiller flow stages them for host consolidation
 
-## ASCII flow
+## Control-plane process flow
 
 ```text
 Recall-risk path
@@ -404,6 +407,23 @@ After install and gateway restart, verify:
 - high-confidence structured corrections may auto-write immediately
 - bare low-confidence forms do not create noisy automatic writes by default
 - benign non-corrections do not trigger writeback reflex too often
+
+## General regression scenarios
+
+When validating this package, use generalized fixture-style checks instead of personal or environment-specific examples.
+
+Recommended baseline scenarios:
+- ambient false positive, a vague preference-style query with no real anchor should stay unanchored
+- attribute fact, a concrete subject-plus-attribute line should anchor cleanly
+- birthday fact, a concrete subject-plus-date fact should anchor cleanly
+- correction conflict, a claim using an old corrected value should route to correction override behavior
+- meta or test noise line, diagnostic or validation residue should not outrank a real factual line just because tokens overlap
+- date-specific event query, a partially related line should stay tentative and emit host escalation guidance when the temporal slice is still under-anchored
+
+For repeatable validation, the next quality step is:
+- a tiny `test-fixtures/` folder
+- a repeatable `check` / `recover` regression script
+- fixture coverage for the six baseline scenarios above
 
 ## License
 

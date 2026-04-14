@@ -1,16 +1,22 @@
 # Truth Control Plugin — Installation Guide
 
-## Package identity and compatibility
+## Compatibility identity
 
-Operator-facing package name in this phase:
+This package is in a transitional naming phase.
+
+Operator-facing package name:
 - package name: `truth-control-claw`
-- recommended install path example: `/absolute/path/to/truth-control-claw`
-- recommended local extensions folder example: `~/.openclaw/extensions/truth-control-claw/`
 
-Compatibility runtime ids preserved in this phase:
+Runtime compatibility ids still preserved in this phase:
 - plugin id: `truth-recovery`
 - native tool: `truth_recovery`
 - bundled skill path: `skills/truth-recovery/`
+- skill frontmatter name: `truth-control`
+
+Why they differ right now:
+- operators install and refer to the package as **truth-control-claw**
+- runtime ids stay on the old compatibility surface so existing plugin wiring, tool calls, and bundle loading do not break during the transition
+- the package identity has moved first, while the runtime surface is intentionally lagging behind for compatibility
 
 Install one plugin package and get the full truth-control package surface:
 - native plugin runtime
