@@ -179,7 +179,7 @@ Expected native tool actions:
 
 Strengthening-pass result notes:
 - `check` now returns `next_action` to make the host control signal more concrete
-- `recover` now returns optional `host_routing_hint` alongside portable `suggested_surface_types`
+- `recover` now returns deterministic `score`, `score_breakdown`, `score_strength`, optional `strength_cap_reason`, `next_action`, and optional `host_routing_hint` alongside portable `suggested_surface_types`
 - `writeback` may persist `capture_confidence` and `capture_reason` for structured corrections
 - the transient correction signal helps shape the next turn, but the hot correction register remains the authoritative recent-correction surface
 

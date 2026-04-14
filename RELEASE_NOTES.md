@@ -1,5 +1,25 @@
 # Release Notes
 
+## 1.1.0
+
+Deterministic recover scoring layer.
+
+What changed:
+- `recover.py` now computes a transparent weighted composite score for already-retrieved candidates instead of relying only on coarse heuristic ordering
+- six deterministic score signals added: `subject_alignment`, `surface`, `specificity`, `temporal`, `context_focus`, and `claim_type_match`
+- score bands added: `strong`, `medium`, `weak`, `none`
+- hard safety gates still cap results downward when strict binding, subject alignment, ambient collision, unusable-anchor, or meta-noise checks fail
+- result entries now include `score`, `score_breakdown`, `score_strength`, and optional `strength_cap_reason`
+- top-level recover output now includes `best_score` and a host-facing `next_action`
+- ranking now prefers usable anchors, final strength, and composite score before fallback tie-breakers
+- `host_routing_hint` now fires for weak results and borderline medium results, not only for fully empty recovery
+- diagnostic and validation residue is down-ranked more aggressively to reduce subject-bleed false positives
+
+Design boundary preserved:
+- deterministic only, no embeddings, NER model, or LLM rescoring
+- correction precedence remains above score
+- retrieval ladder ownership still stays outside this plugin
+
 ## 1.0.0
 
 First standalone plugin package release.

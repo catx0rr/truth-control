@@ -245,8 +245,71 @@ Actions:
 
 Key action outputs in this strengthening pass:
 - `check` still returns the recommendation mode, but now also returns `next_action` so the host can react more deterministically
-- `recover` keeps portable `suggested_surface_types` and now also returns an optional `host_routing_hint` string for host-neutral operator guidance
+- `recover` now returns a deterministic composite `score`, `score_breakdown`, `score_strength`, optional `strength_cap_reason`, a host-facing `next_action`, and an optional `host_routing_hint` string for host-neutral operator guidance
 - `writeback` can persist `capture_confidence` and `capture_reason` when a structured correction was captured by the plugin runtime
+
+## Deterministic scoring model (v1.1)
+
+`recover.py` now adds a deterministic numeric scoring layer on top of the existing honesty and eligibility gates.
+
+Important boundary:
+- scoring ranks already-retrieved candidates
+- scoring does **not** replace retrieval
+- scoring does **not** override correction precedence
+- scoring does **not** bypass hard safety gates such as failed subject alignment, ambient collision risk, unusable anchors, or strict-binding failure
+
+Composite score:
+
+```text
+score =
+  (subject_alignment * 0.30) +
+  (surface * 0.20) +
+  (specificity * 0.15) +
+  (temporal * 0.15) +
+  (context_focus * 0.10) +
+  (claim_type_match * 0.10)
+```
+
+Signals:
+- `subject_alignment` 0.30, is the candidate actually about the named subject
+- `surface` 0.20, how trustworthy the source surface is
+- `specificity` 0.15, how concrete the detail is
+- `temporal` 0.15, whether the timing is plausible enough
+- `context_focus` 0.10, whether the line looks like real content instead of meta or diagnostic noise
+- `claim_type_match` 0.10, quantized match between candidate content and claim type
+
+Surface trust values:
+- `recent_corrections` = 1.0
+- `pending_actions` = 0.75
+- `scoped_daily_memory` = 0.65
+- `durable_memory` = 0.55
+- `procedural_memory` = 0.45
+
+Score bands:
+- `strong` = `>= 0.70`
+- `medium` = `0.45–0.69`
+- `weak` = `0.15–0.44`
+- `none` = `< 0.15`
+
+Hard-cap examples:
+- strict subject binding failure can cap the result to `none`
+- ambient collision without real subject focus can cap the result to `weak`
+- unusable anchors do not get rescued by score alone
+- meta or diagnostic lines do not get promoted just because they share tokens
+
+Result fields added by `recover` in v1.1:
+- `score`
+- `score_breakdown`
+- `score_strength`
+- `strength_cap_reason` when a hard safety cap applied
+- `best_score` on the top-level recover result
+- `next_action` on the top-level recover result
+
+Recovery routing effect in v1.1:
+- `answer_direct` only when the best result is strong enough and not under a major safety shadow
+- `tentative_answer` when there is a usable medium-strength anchor
+- `ask_or_escalate` when the best result is weak, unanchored, or still too borderline
+- `host_routing_hint` now fires not only for `none`, but also for weak results and borderline medium results that still need stronger host retrieval before being stated as fact
 
 ### Distill action decision
 
