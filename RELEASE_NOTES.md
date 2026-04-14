@@ -1,5 +1,22 @@
 # Release Notes
 
+## 1.2.0
+
+Final scoring calibration and routing alignment.
+
+What changed:
+- `recover.py` surface trust values now match the intended spec more closely: `pending_actions=0.90`, `scoped_daily_memory=0.70`, `durable_memory=0.60`, `procedural_memory=0.50`
+- `next_action` now follows the final resolved strength outcome instead of re-imposing a separate `score >= 0.70` gate after a result is already classified as strong and anchored
+- strong usable correction anchors in the 0.66–0.69 range no longer fall through to `ask_or_escalate` just because they sit below the old direct-answer cliff
+- bare hour forms like `5pm` are now recognized as time signals in recover scoring instead of being treated weaker than `5:00pm`
+- sentence-initial capital stopwords like `The` are no longer misread as named subjects in full-sentence claims, which removes a false `subject_alignment_failed` path on ordinary correction sentences
+- release keeps the existing hard safety caps, host escalation hints, and diagnostic-noise demotion intact
+
+Design boundary preserved:
+- this is still deterministic ranking, not semantic retrieval
+- the recall gap remains a separate retrieval-layer problem, not something hidden by score inflation
+- correction precedence still remains above score
+
 ## 1.1.0
 
 Deterministic recover scoring layer.

@@ -84,10 +84,10 @@ NAME_LIKE_EXCLUDE = {
 
 SURFACE_SCORES = {
     'recent_corrections': 1.0,
-    'pending_actions': 0.75,
-    'scoped_daily_memory': 0.65,
-    'durable_memory': 0.55,
-    'procedural_memory': 0.45,
+    'pending_actions': 0.90,
+    'scoped_daily_memory': 0.70,
+    'durable_memory': 0.60,
+    'procedural_memory': 0.50,
 }
 
 TIME_TERMS = {
@@ -170,12 +170,12 @@ def extract_subject_tokens(query: str) -> set:
 
     for raw in re.findall(r"\b([A-Z][A-Za-z0-9_-]{2,}|[A-Z]{2,}[A-Z0-9_-]*)\b", query):
         token = raw.lower()
-        if token not in SUBJECT_EXCLUDE and token not in CALENDAR_EXCLUDE:
+        if token not in SUBJECT_EXCLUDE and token not in CALENDAR_EXCLUDE and token not in STOPWORDS:
             subjects.add(token)
 
     for raw in re.findall(r"\b([A-Za-z0-9_-]{3,})'s\b", query):
         token = raw.lower()
-        if token not in SUBJECT_EXCLUDE and token not in CALENDAR_EXCLUDE:
+        if token not in SUBJECT_EXCLUDE and token not in CALENDAR_EXCLUDE and token not in STOPWORDS:
             subjects.add(token)
 
     return subjects
@@ -248,7 +248,7 @@ def infer_claim_type(query: str, profile: dict) -> str:
     has_time = (
         'when' in query_lower or
         bool(TIME_TERMS & set(tokenize(query_lower))) or
-        bool(re.search(r'\b\d{1,2}:\d{2}\s*(?:am|pm)?\b', query_lower)) or
+        bool(re.search(r'\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b', query_lower)) or
         bool(re.search(r'\b\d{4}-\d{2}-\d{2}\b', query_lower))
     )
     has_location = 'where' in query_lower or bool(LOCATION_TERMS & set(tokenize(query_lower)))
@@ -496,7 +496,7 @@ def score_specificity(query: str, result: dict) -> float:
     text_lower = text.lower()
 
     signals = 0
-    if re.search(r'\b\d{4}-\d{2}-\d{2}\b', text_lower) or re.search(r'\b\d{1,2}:\d{2}\s*(?:am|pm)?\b', text_lower) or bool(TIME_TERMS & set(tokenize(text_lower))):
+    if re.search(r'\b\d{4}-\d{2}-\d{2}\b', text_lower) or re.search(r'\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b', text_lower) or bool(TIME_TERMS & set(tokenize(text_lower))):
         signals += 1
     if re.search(r'\b\d+\b', text_lower):
         signals += 1
@@ -605,7 +605,7 @@ def score_claim_type_match(claim_type: str, query: str, result: dict) -> float:
     text_lower = text.lower()
     tokens = set(tokenize(text_lower))
 
-    has_time = bool(TIME_TERMS & tokens) or bool(re.search(r'\b\d{1,2}:\d{2}\s*(?:am|pm)?\b', text_lower)) or bool(re.search(r'\b\d{4}-\d{2}-\d{2}\b', text_lower))
+    has_time = bool(TIME_TERMS & tokens) or bool(re.search(r'\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b', text_lower)) or bool(re.search(r'\b\d{4}-\d{2}-\d{2}\b', text_lower))
     has_location = bool(LOCATION_TERMS & tokens) or bool(re.search(r'\b(?:in|at|to|from)\s+[A-Z][A-Za-z]+', text))
     has_status = bool(STATUS_TERMS & tokens)
     has_version = bool(VERSION_TERMS & tokens) or bool(re.search(r'\bv?\d{4}\.\d+(?:\.\d+)?\b', text_lower))
@@ -972,9 +972,7 @@ def run_recovery(query: str, corrections_file: str, pending_file: str,
     suggested_types = []
     host_routing_hint = None
     next_action = 'ask_or_escalate'
-    if best_strength == STRENGTH_STRONG and best_score >= 0.70 and not (
-        best_result.get('possible_ambient_collision') or best_result.get('meta_or_test_like')
-    ):
+    if best_result and best_strength == STRENGTH_STRONG and best_result.get('usable_anchor') and not needs_additional:
         next_action = 'answer_direct'
     elif best_strength == STRENGTH_MEDIUM and best_result and best_result.get('usable_anchor'):
         next_action = 'tentative_answer'

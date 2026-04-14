@@ -1,6 +1,6 @@
 {
   "name": "truth-control-claw",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "Standalone OpenClaw truth-control plugin with compatibility ids preserved, narrow truth gating, deterministic recover scoring, correction-trigger support, native tool, bundled skill, and runtime prompts.",
   "license": "MIT",

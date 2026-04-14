@@ -283,10 +283,10 @@ Signals:
 
 Surface trust values:
 - `recent_corrections` = 1.0
-- `pending_actions` = 0.75
-- `scoped_daily_memory` = 0.65
-- `durable_memory` = 0.55
-- `procedural_memory` = 0.45
+- `pending_actions` = 0.90
+- `scoped_daily_memory` = 0.70
+- `durable_memory` = 0.60
+- `procedural_memory` = 0.50
 
 Score bands:
 - `strong` = `>= 0.70`
@@ -308,8 +308,8 @@ Result fields added by `recover` in v1.1:
 - `best_score` on the top-level recover result
 - `next_action` on the top-level recover result
 
-Recovery routing effect in v1.1:
-- `answer_direct` only when the best result is strong enough and not under a major safety shadow
+Recovery routing effect in v1.2:
+- `answer_direct` now follows the final strong anchored outcome more directly, instead of re-imposing a separate score cliff after strength resolution
 - `tentative_answer` when there is a usable medium-strength anchor
 - `ask_or_escalate` when the best result is weak, unanchored, or still too borderline
 - `host_routing_hint` now fires not only for `none`, but also for weak results and borderline medium results that still need stronger host retrieval before being stated as fact
