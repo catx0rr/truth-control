@@ -90,6 +90,78 @@ Flow:
 - structured explicit corrections may be written immediately to the runtime correction register
 - later distiller flow stages them for host consolidation
 
+## ASCII flow
+
+```text
+Recall-risk path
+----------------
+User asks recall-sensitive question
+        |
+        v
+Host retrieval routing runs first
+(lightest correct layer first)
+        |
+        v
+before_prompt_build
+inject short truth-control nudge
+only when recall risk is present
+        |
+        v
+Agent turn / host may call truth_recovery.check
+        |
+        +--> correction conflict found
+        |        |
+        |        v
+        |   use corrected value / override stale recall
+        |
+        +--> still weakly anchored
+        |        |
+        |        v
+        |   truth_recovery.recover
+        |        |
+        |        +--> anchor found -> answer with anchor
+        |        |
+        |        `--> no anchor -> ask, retrieve more, or stay general
+        |
+        `--> already anchored -> answer directly
+
+
+Correction-capture path
+-----------------------
+Inbound user turn
+        |
+        v
+before_dispatch
+classify: none / possible_correction / explicit_correction
+        |
+        +--> explicit + structured + safe enough
+        |        |
+        |        v
+        |   writeback to hot correction register
+        |   (authoritative recent-correction surface)
+        |
+        `--> set transient session signal
+                 |
+                 v
+          before_prompt_build
+          inject correction-aware nudge
+                 |
+                 v
+          agent answers using corrected value first
+                 |
+                 v
+          later distiller stages corrections to daily memory
+                 |
+                 v
+          host consolidation / reconciliation happens later
+
+Authority rule
+--------------
+Transient session signal -> shapes the matching turn only
+Hot correction register  -> source of truth for recent corrections
+Daily memory / durable memory -> later staged and consolidated layers
+```
+
 ## Architecture boundary
 
 Memory stack split:
