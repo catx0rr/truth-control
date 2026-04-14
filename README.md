@@ -1,7 +1,13 @@
 # Truth Control Claw
 
-Compatibility surfaces in this phase:
+## Package identity and compatibility
+
+Operator-facing package name in this phase:
 - package name: `truth-control-claw`
+- recommended install path example: `/absolute/path/to/truth-control-claw`
+- recommended local extensions folder example: `~/.openclaw/extensions/truth-control-claw/`
+
+Compatibility runtime ids preserved in this phase:
 - plugin id: `truth-recovery`
 - native tool: `truth_recovery`
 - bundled skill path: `skills/truth-recovery/`
@@ -110,7 +116,10 @@ That detector is implemented in the plugin runtime, not as a separate Python scr
 Its job is intentionally narrow:
 - classify the prepared inbound turn as `none`, `possible_correction`, or `explicit_correction`
 - keep the detector conservative
+- support a small structured correction family, including forms like `not X, but Y`, `it's X, not Y`, `should be X not Y`, `I mean X not Y`, and guarded interruption forms
+- attach machine-readable `capture_confidence` and `capture_reason` to structured correction candidates
 - only auto-record when the correction is explicit **and** structured enough to extract a safe replacement pair
+- use confidence-tiered auto-write behavior: `high` may auto-write directly, `medium` needs extra guard signals, `low` stays candidate-only by default
 - pass a short-lived session-scoped signal to the matching agent turn
 
 It does **not**:
@@ -136,7 +145,10 @@ Recent explicit user corrections outrank stale memory, repeated ambient associat
 Operationally:
 - inbound trigger detects correction-shaped turns
 - structured explicit corrections may be written to the runtime correction register immediately
+- recorded correction entries may include `capture_confidence` and `capture_reason` for later debugging and tuning
+- the transient correction signal helps shape the matching turn, but the hot correction register is the authoritative recent-correction surface
 - `check` consults recent corrections before permitting a specific factual claim
+- `check` now emits a host-facing `next_action` control signal such as `answer_direct`, `call_recover`, `use_correction_override`, or `ask_or_stay_general`
 - `distill` stages corrections into daily memory surfaces
 - later host consolidators decide durable absorption and reconciliation
 
@@ -158,6 +170,11 @@ Actions:
 - `list-corrections`
 - `prune-corrections`
 - `mark-consolidated`
+
+Key action outputs in this strengthening pass:
+- `check` still returns the recommendation mode, but now also returns `next_action` so the host can react more deterministically
+- `recover` keeps portable `suggested_surface_types` and now also returns an optional `host_routing_hint` string for host-neutral operator guidance
+- `writeback` can persist `capture_confidence` and `capture_reason` when a structured correction was captured by the plugin runtime
 
 ### Distill action decision
 
@@ -219,8 +236,11 @@ Supported fields:
 ## Install story
 
 This package can be loaded locally in two ways:
-- preferred managed install via `openclaw plugins install /absolute/path/to/truth-recovery-plugin`
+- preferred managed install via `openclaw plugins install /absolute/path/to/truth-control-claw`
 - manual local loading by placing the package under `~/.openclaw/extensions/`
+
+Example manual local folder shape:
+- `~/.openclaw/extensions/truth-control-claw/`
 
 Installing this single plugin package gives you:
 - plugin runtime
@@ -245,6 +265,9 @@ After install and gateway restart, verify:
 - runtime prompts exist under `runtime/`
 - Python scripts are present under `scripts/`
 - explicit structured correction turns create a transient turn signal
+- recorded structured corrections include `capture_confidence` / `capture_reason` when applicable
+- high-confidence structured corrections may auto-write immediately
+- bare low-confidence forms do not create noisy automatic writes by default
 - benign non-corrections do not trigger writeback reflex too often
 
 ## Status

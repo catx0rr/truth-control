@@ -91,7 +91,8 @@ def ensure_runtime_dir(filepath: str):
 
 
 def write_correction(filepath: str, old: str, corrected: str, scope: str,
-                     source: str = 'user_correction', context: str = None) -> dict:
+                     source: str = 'user_correction', context: str = None,
+                     capture_confidence: str = None, capture_reason: str = None) -> dict:
     """Append a correction entry to the JSONL file."""
     ensure_runtime_dir(filepath)
 
@@ -113,6 +114,12 @@ def write_correction(filepath: str, old: str, corrected: str, scope: str,
 
     if context:
         entry['context'] = context
+
+    if capture_confidence:
+        entry['capture_confidence'] = capture_confidence
+
+    if capture_reason:
+        entry['capture_reason'] = capture_reason
 
     with open(filepath, 'a') as f:
         f.write(json.dumps(entry, ensure_ascii=False) + '\n')
@@ -235,6 +242,10 @@ def main():
     parser.add_argument('--source', default='user_correction',
                         help='Source of the correction (default: user_correction)')
     parser.add_argument('--context', help='Optional context for the correction')
+    parser.add_argument('--capture-confidence', choices=['high', 'medium', 'low'],
+                        help='Optional machine-readable confidence for structured capture')
+    parser.add_argument('--capture-reason',
+                        help='Optional machine-readable reason for the capture decision')
 
     # List mode
     parser.add_argument('--list', action='store_true', help='List recent corrections')
@@ -287,7 +298,7 @@ def main():
         parser.error('--scope is required for writeback')
 
     entry = write_correction(args.file, args.old, args.corrected, args.scope,
-                             args.source, args.context)
+                             args.source, args.context, args.capture_confidence, args.capture_reason)
 
     print(json.dumps({
         'action': 'correction_recorded',

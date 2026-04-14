@@ -49,6 +49,15 @@ SUBJECT_EXCLUDE = {
     'is', 'are', 'was', 'were', 'tell', 'show',
 }
 
+CALENDAR_EXCLUDE = {
+    'january', 'february', 'march', 'april', 'may', 'june', 'july',
+    'august', 'september', 'october', 'november', 'december',
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    'today', 'tomorrow', 'yesterday', 'week', 'weekend', 'month', 'year',
+    'morning', 'afternoon', 'evening', 'night', 'midnight', 'noon',
+    'date', 'time', 'day', 'daily', 'hour', 'minute', 'calendar',
+}
+
 STRICT_QUERY_TERMS = {
     'favorite', 'likes', 'prefers', 'belongs to', 'from', 'works at', 'date',
     'version', 'status', 'owner', 'ownership',
@@ -67,9 +76,7 @@ META_LOG_TERMS = {
 
 NAME_LIKE_EXCLUDE = {
     *SUBJECT_EXCLUDE,
-    'january', 'february', 'march', 'april', 'may', 'june', 'july',
-    'august', 'september', 'october', 'november', 'december',
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+    *CALENDAR_EXCLUDE,
     'family', 'birthday', 'version', 'status', 'memory', 'validation', 'test',
 }
 
@@ -98,12 +105,12 @@ def extract_subject_tokens(query: str) -> set:
 
     for raw in re.findall(r"\b([A-Z][A-Za-z0-9_-]{2,}|[A-Z]{2,}[A-Z0-9_-]*)\b", query):
         token = raw.lower()
-        if token not in SUBJECT_EXCLUDE:
+        if token not in SUBJECT_EXCLUDE and token not in CALENDAR_EXCLUDE:
             subjects.add(token)
 
     for raw in re.findall(r"\b([A-Za-z0-9_-]{3,})'s\b", query):
         token = raw.lower()
-        if token not in SUBJECT_EXCLUDE:
+        if token not in SUBJECT_EXCLUDE and token not in CALENDAR_EXCLUDE:
             subjects.add(token)
 
     return subjects
@@ -201,6 +208,7 @@ def subject_focus_assessment(profile: dict, candidate_text: str, candidate_keywo
         'primary_subject_match': primary_subject_match,
         'primary_subject_token': primary_subject_token,
         'subject_support_distance': subject_support_distance,
+        'direct_subject_pattern': direct_subject_pattern,
     }
 
 
@@ -248,6 +256,15 @@ def assess_candidate(profile: dict, candidate_text: str, base_strength: str) -> 
         subject_overlap,
         supporting_overlap,
     )
+
+    if (
+        usable_anchor and
+        strength == base_strength == STRENGTH_MEDIUM and
+        focus.get('subject_focused') and
+        focus.get('direct_subject_pattern') and
+        not focus.get('meta_or_test_like')
+    ):
+        strength = STRENGTH_STRONG
 
     return {
         'text_match_found': text_match_found,
@@ -491,12 +508,21 @@ def run_recovery(query: str, corrections_file: str, pending_file: str,
     # Signal whether additional retrieval is needed
     needs_additional = best_strength in (STRENGTH_NONE, STRENGTH_WEAK)
     suggested_types = []
+    host_routing_hint = None
     if best_strength == STRENGTH_NONE:
         suggested_types = ['semantic_memory', 'conversation_archive', 'external_authority']
+        host_routing_hint = (
+            "use the host's semantic memory retrieval surface first; if still unanchored, "
+            "use the host's conversation/session retrieval surface, then the host's external authority path"
+        )
     elif best_strength == STRENGTH_WEAK:
         suggested_types = ['semantic_memory', 'conversation_archive']
+        host_routing_hint = (
+            "use the host's semantic memory retrieval surface first, then the host's conversation/session retrieval surface"
+        )
     elif best_strength == STRENGTH_MEDIUM:
         suggested_types = ['semantic_memory']
+        host_routing_hint = "use the host's semantic memory retrieval surface"
 
     return {
         'query': query,
@@ -515,6 +541,7 @@ def run_recovery(query: str, corrections_file: str, pending_file: str,
         'needs_additional_retrieval': needs_additional,
         'possible_ambient_collision': any(r.get('possible_ambient_collision') for r in all_results),
         'suggested_surface_types': suggested_types if needs_additional else [],
+        'host_routing_hint': host_routing_hint if needs_additional else None,
         'recommended_mode': (
             'anchored' if best_strength == STRENGTH_STRONG else
             'tentative' if best_strength == STRENGTH_MEDIUM else

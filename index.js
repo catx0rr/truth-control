@@ -255,6 +255,93 @@ function inferCorrectionScope(text, oldValue, correctedValue) {
   return "detail";
 }
 
+function countWords(value) {
+  const normalized = asString(value);
+  if (!normalized) return 0;
+  return normalized.split(/\s+/).filter(Boolean).length;
+}
+
+function startsWithCorrectionMarker(text) {
+  const normalized = asString(text);
+  if (!normalized) return false;
+  return /^(?:wait|no|actually|correction|i mean|i meant|should be|it(?:'s| is)|not)\b/i.test(normalized);
+}
+
+function looksSpeculativeOrRhetorical(text) {
+  const normalized = asString(text);
+  if (!normalized) return false;
+  return /\?|\b(?:maybe|probably|i think|i guess|perhaps|or maybe|or just|kind of|sort of)\b/i.test(normalized);
+}
+
+function hasReplyContext(event, ctx) {
+  return Boolean(
+    event?.replyTo ||
+      event?.replyToMessageId ||
+      event?.quotedMessageId ||
+      event?.quotedMessage ||
+      ctx?.replyToMessageId ||
+      ctx?.quotedMessageId
+  );
+}
+
+function isShortUnambiguousCorrection(oldValue, correctedValue) {
+  const oldWords = countWords(oldValue);
+  const correctedWords = countWords(correctedValue);
+  return oldWords > 0 && correctedWords > 0 && oldWords <= 6 && correctedWords <= 8;
+}
+
+function buildStructuredCorrection({ body, oldValue, correctedValue, patternLabel, captureConfidence }) {
+  if (!oldValue || !correctedValue) return undefined;
+  if (oldValue.toLowerCase() === correctedValue.toLowerCase()) return undefined;
+  return {
+    correctionSignal: "explicit_correction",
+    reason: "structured_replacement",
+    oldValue,
+    correctedValue,
+    scope: inferCorrectionScope(body, oldValue, correctedValue),
+    bodyForAgent: body,
+    autoWriteCandidate: captureConfidence === "high",
+    capture_confidence: captureConfidence,
+    capture_reason: `matched pattern: ${patternLabel}`
+  };
+}
+
+function shouldAutoWriteStructuredCorrection(detection, event, ctx) {
+  if (!detection?.oldValue || !detection?.correctedValue) {
+    return { autoWriteCandidate: false, autoWriteGuards: ["no_structured_pair"] };
+  }
+
+  if (looksSpeculativeOrRhetorical(detection.bodyForAgent)) {
+    return { autoWriteCandidate: false, autoWriteGuards: ["speculative_or_rhetorical"] };
+  }
+
+  const autoWriteGuards = [];
+  if (hasReplyContext(event, ctx)) autoWriteGuards.push("reply_context");
+  if (startsWithCorrectionMarker(detection.bodyForAgent)) autoWriteGuards.push("starts_with_correction_marker");
+  if (detection.scope && detection.scope !== "detail") autoWriteGuards.push("clear_scope");
+  if (isShortUnambiguousCorrection(detection.oldValue, detection.correctedValue)) {
+    autoWriteGuards.push("short_unambiguous_pair");
+  }
+
+  if (detection.capture_confidence === "high") {
+    return { autoWriteCandidate: true, autoWriteGuards };
+  }
+
+  if (detection.capture_confidence === "medium") {
+    return {
+      autoWriteCandidate: autoWriteGuards.length >= 2,
+      autoWriteGuards: autoWriteGuards.length ? autoWriteGuards : ["insufficient_additional_guards"]
+    };
+  }
+
+  return {
+    autoWriteCandidate:
+      autoWriteGuards.length >= 3 &&
+      (autoWriteGuards.includes("clear_scope") || autoWriteGuards.includes("reply_context")),
+    autoWriteGuards: autoWriteGuards.length ? autoWriteGuards : ["insufficient_additional_guards"]
+  };
+}
+
 function classifyCorrectionIntent(text) {
   const body = sanitizeInboundBody(text);
   if (!body) {
@@ -271,23 +358,61 @@ function classifyCorrectionIntent(text) {
     return { correctionSignal: "none", reason: "benign_negative" };
   }
 
-  const structuredPatterns = [/^(?:no\s*,\s*)?not\s+(.{1,80}?)\s*(?:-|–|—|,?\s+but)\s+(.{1,120}?)\s*$/i];
-  for (const pattern of structuredPatterns) {
-    const match = body.match(pattern);
+  const structuredPatterns = [
+    {
+      pattern: /^(?:no\s*,\s*)?not\s+(.{1,80}?)\s*(?:-|–|—|,?\s+but)\s+(.{1,120}?)\s*$/i,
+      patternLabel: "not X, but Y",
+      captureConfidence: "high",
+      extract: (match) => ({ oldValue: match[1], correctedValue: match[2] })
+    },
+    {
+      pattern: /^(?:it(?:'s|\s+is))\s+(.{1,120}?)\s*,?\s*not\s+(.{1,80}?)\s*$/i,
+      patternLabel: "it's X, not Y",
+      captureConfidence: "high",
+      extract: (match) => ({ oldValue: match[2], correctedValue: match[1] })
+    },
+    {
+      pattern: /^should\s+be\s+(.{1,120}?)\s*,?\s*not\s+(.{1,80}?)\s*$/i,
+      patternLabel: "should be X, not Y",
+      captureConfidence: "high",
+      extract: (match) => ({ oldValue: match[2], correctedValue: match[1] })
+    },
+    {
+      pattern: /^i\s+mea(?:n|nt)\s+(.{1,120}?)\s*,?\s*not\s+(.{1,80}?)\s*$/i,
+      patternLabel: "I mean X, not Y",
+      captureConfidence: "high",
+      extract: (match) => ({ oldValue: match[2], correctedValue: match[1] })
+    },
+    {
+      pattern: /^(?:wait|no|actually)\s*,\s*(.{1,120}?)\s*,?\s*not\s+(.{1,80}?)\s*$/i,
+      patternLabel: "interruption correction X, not Y",
+      captureConfidence: "medium",
+      extract: (match) => ({ oldValue: match[2], correctedValue: match[1] })
+    },
+    {
+      pattern: /^(.{1,120}?)\s+not\s+(.{1,80}?)\s*$/i,
+      patternLabel: "bare X not Y",
+      captureConfidence: "low",
+      extract: (match) => ({ oldValue: match[2], correctedValue: match[1] })
+    }
+  ];
+
+  for (const structuredPattern of structuredPatterns) {
+    const match = body.match(structuredPattern.pattern);
     if (!match) continue;
-    const oldValue = cleanCorrectionValue(match[1]);
-    const correctedValue = cleanCorrectionValue(match[2]);
-    if (!oldValue || !correctedValue) continue;
-    if (oldValue.toLowerCase() === correctedValue.toLowerCase()) continue;
-    return {
-      correctionSignal: "explicit_correction",
-      reason: "structured_replacement",
+    const extracted = structuredPattern.extract(match);
+    const oldValue = cleanCorrectionValue(extracted.oldValue);
+    const correctedValue = cleanCorrectionValue(extracted.correctedValue);
+    const structured = buildStructuredCorrection({
+      body,
       oldValue,
       correctedValue,
-      scope: inferCorrectionScope(body, oldValue, correctedValue),
-      bodyForAgent: body,
-      autoWriteCandidate: true
-    };
+      patternLabel: structuredPattern.patternLabel,
+      captureConfidence: structuredPattern.captureConfidence
+    });
+    if (structured) {
+      return structured;
+    }
   }
 
   const explicitPatterns = [
@@ -422,6 +547,8 @@ function buildArgs(action, params, resolved) {
     args.push("--file", resolved.correctionsFile);
     if (asString(params.source)) args.push("--source", asString(params.source));
     if (asString(params.context)) args.push("--context", asString(params.context));
+    if (asString(params.captureConfidence)) args.push("--capture-confidence", asString(params.captureConfidence));
+    if (asString(params.captureReason)) args.push("--capture-reason", asString(params.captureReason));
     return args;
   }
 
@@ -461,7 +588,9 @@ async function maybeAutoRecordExplicitCorrection(detection, pluginConfig, logger
     corrected: detection.correctedValue,
     scope: detection.scope || "detail",
     source: "truth_control_hook",
-    context: detection.bodyForAgent?.slice(0, 240)
+    context: detection.bodyForAgent?.slice(0, 240),
+    captureConfidence: detection.capture_confidence,
+    captureReason: detection.capture_reason
   };
 
   try {
@@ -513,15 +642,26 @@ export default definePluginEntry({
         return;
       }
 
+      const autoWriteDecision =
+        detection.reason === "structured_replacement"
+          ? shouldAutoWriteStructuredCorrection(detection, event, ctx)
+          : { autoWriteCandidate: false, autoWriteGuards: ["non_structured_explicit_signal"] };
+
+      const finalDetection = {
+        ...detection,
+        autoWriteCandidate: autoWriteDecision.autoWriteCandidate,
+        autoWriteGuards: autoWriteDecision.autoWriteGuards
+      };
+
       const autoWriteback =
-        detection.correctionSignal === "explicit_correction"
-          ? await maybeAutoRecordExplicitCorrection(detection, api.pluginConfig ?? {}, api.logger)
+        finalDetection.correctionSignal === "explicit_correction"
+          ? await maybeAutoRecordExplicitCorrection(finalDetection, api.pluginConfig ?? {}, api.logger)
           : { autoRecorded: false, reason: "non_explicit_or_non_structured" };
 
       setCorrectionSignal(
         sessionKey,
         {
-          ...detection,
+          ...finalDetection,
           autoWriteback,
           senderId: asString(event.senderId),
           messageTimestamp: event.timestamp
@@ -564,6 +704,8 @@ export default definePluginEntry({
           scope: { type: "string" },
           source: { type: "string" },
           context: { type: "string" },
+          captureConfidence: { type: "string", enum: ["high", "medium", "low"] },
+          captureReason: { type: "string" },
           specificity: { type: "string", enum: ["auto", "specific", "general"] },
           claimType: { type: "string" },
           checkPending: { type: "boolean" },

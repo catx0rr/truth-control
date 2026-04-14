@@ -62,6 +62,31 @@ GENERAL_PATTERNS = [
     r'^(?:what is|how does|can you explain|tell me about)\b',
 ]
 
+LIGHT_WRAPPER_TOKENS = {'the', 'a', 'an'}
+
+
+def normalize_token(token: str) -> str:
+    token = token.lower().strip()
+    token = re.sub(r"[^a-z0-9\s]", "", token)
+    if token.endswith("'s"):
+        token = token[:-2]
+    if len(token) > 4 and token.endswith('s') and not token.endswith(('ss', 'us', 'is', 'as')):
+        token = token[:-1]
+    return token
+
+
+def normalize_text(value: str) -> str:
+    lowered = value.lower()
+    lowered = re.sub(r"[^a-z0-9\s]", " ", lowered)
+    tokens = []
+    for raw in lowered.split():
+        if raw in LIGHT_WRAPPER_TOKENS:
+            continue
+        normalized = normalize_token(raw)
+        if normalized:
+            tokens.append(normalized)
+    return ' '.join(tokens)
+
 
 def classify_claim(claim: str, specificity_override: str = None,
                    claim_type_override: str = None) -> dict:
@@ -154,13 +179,21 @@ def find_matching_corrections(claim: str, corrections: list) -> list:
     """Find corrections that are relevant to the given claim."""
     matches = []
     claim_lower = claim.lower()
+    claim_normalized = normalize_text(claim)
 
     for correction in corrections:
         old_val = correction.get('old', '').lower()
         corrected_val = correction.get('corrected', '').lower()
+        old_normalized = normalize_text(correction.get('old', ''))
+        corrected_normalized = normalize_text(correction.get('corrected', ''))
+
+        old_in_claim = bool(old_val and old_val in claim_lower)
+        corrected_in_claim = bool(corrected_val and corrected_val in claim_lower)
+        old_normalized_in_claim = bool(old_normalized and old_normalized in claim_normalized)
+        corrected_normalized_in_claim = bool(corrected_normalized and corrected_normalized in claim_normalized)
 
         # Check if the claim mentions the old (incorrect) value
-        if old_val and old_val in claim_lower:
+        if old_in_claim or old_normalized_in_claim:
             matches.append({
                 'old': correction.get('old'),
                 'corrected': correction.get('corrected'),
@@ -168,10 +201,11 @@ def find_matching_corrections(claim: str, corrections: list) -> list:
                 'confidence': correction.get('source', 'unknown'),
                 'scope': correction.get('scope'),
                 'match_type': 'old_value_in_claim',
+                'match_normalized': not old_in_claim and old_normalized_in_claim,
             })
 
         # Check if the claim mentions the corrected value (good — using correct info)
-        elif corrected_val and corrected_val in claim_lower:
+        elif corrected_in_claim or corrected_normalized_in_claim:
             matches.append({
                 'old': correction.get('old'),
                 'corrected': correction.get('corrected'),
@@ -179,6 +213,7 @@ def find_matching_corrections(claim: str, corrections: list) -> list:
                 'confidence': correction.get('source', 'unknown'),
                 'scope': correction.get('scope'),
                 'match_type': 'corrected_value_in_claim',
+                'match_normalized': not corrected_in_claim and corrected_normalized_in_claim,
             })
 
     return matches
@@ -189,15 +224,6 @@ def find_matching_corrections(claim: str, corrections: list) -> list:
 def determine_output_mode(classification: dict, corrections: list) -> dict:
     """Determine the recommended output mode based on classification and corrections."""
 
-    if not classification['is_specific']:
-        return {
-            'recommended_mode': 'normal',
-            'reason': 'Claim is not specific — no gating needed',
-            'needs_recovery': False,
-            'correction_conflict': False,
-        }
-
-    # Check if any corrections contradict the claim
     contradicting = [c for c in corrections if c['match_type'] == 'old_value_in_claim']
     confirming = [c for c in corrections if c['match_type'] == 'corrected_value_in_claim']
 
@@ -207,6 +233,7 @@ def determine_output_mode(classification: dict, corrections: list) -> dict:
             'reason': f"Active correction exists: '{contradicting[0]['old']}' was corrected to '{contradicting[0]['corrected']}'",
             'needs_recovery': False,
             'correction_conflict': True,
+            'next_action': 'use_correction_override',
         }
 
     if confirming:
@@ -215,6 +242,16 @@ def determine_output_mode(classification: dict, corrections: list) -> dict:
             'reason': f"Claim uses corrected value '{confirming[0]['corrected']}' — matches recent correction",
             'needs_recovery': False,
             'correction_conflict': False,
+            'next_action': 'answer_direct',
+        }
+
+    if not classification['is_specific']:
+        return {
+            'recommended_mode': 'normal',
+            'reason': 'Claim is not specific — no gating needed',
+            'needs_recovery': False,
+            'correction_conflict': False,
+            'next_action': 'answer_direct',
         }
 
     # Specific claim with no correction data — needs anchor check
@@ -223,6 +260,7 @@ def determine_output_mode(classification: dict, corrections: list) -> dict:
         'reason': f"Specific claim (type: {classification['claim_type']}) — requires anchor verification",
         'needs_recovery': True,
         'correction_conflict': False,
+        'next_action': 'call_recover',
     }
 
 
@@ -265,6 +303,7 @@ def main():
         'reason': mode_decision['reason'],
         'needs_recovery': mode_decision['needs_recovery'],
         'correction_conflict': mode_decision['correction_conflict'],
+        'next_action': mode_decision['next_action'],
     }
 
     print(json.dumps(result, indent=2, ensure_ascii=False))
